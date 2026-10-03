@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/g8rdier/hqnn-forge/actions/workflows/tests.yml/badge.svg)](https://github.com/g8rdier/hqnn-forge/actions/workflows/tests.yml)
 [![License](https://img.shields.io/github/license/g8rdier/hqnn-forge)](https://github.com/g8rdier/hqnn-forge/blob/main/LICENSE)
-[![Docs](https://github.com/g8rdier/hqnn-forge/actions/workflows/docs.yml/badge.svg)](https://g8rdier.github.io/hqnn-forge/)
+[![Docs](https://github.com/g8rdier/hqnn-forge/actions/workflows/docs.yml/badge.svg)](https://hqnn-forge.github.io/hqnn-forge/)
 
 > **Test whether a small quantum layer earns its parameters on imbalanced binary tabular data.**
 
@@ -20,6 +20,10 @@ pretrained embedding (see
 The estimator, losses, thresholds and metrics are built for binary targets;
 `MulticlassHybridClassifier` covers multiclass targets at the model level only. End-to-end
 image, text or time-series pipelines are out of scope.
+
+**Documentation.** The API reference, rendered from the docstrings, is at
+**<https://hqnn-forge.github.io/hqnn-forge/>**, together with the
+[methodology](https://hqnn-forge.github.io/hqnn-forge/methodology/) the comparisons follow.
 
 ---
 
@@ -255,7 +259,15 @@ loss = loss_fn(logits.squeeze(), y)
 loss.backward()
 ```
 
-See `examples/quick_start.py` for a full training loop on a synthetic imbalanced dataset.
+See `examples/quick_start.py` for a full training loop on a synthetic imbalanced dataset, and
+the API reference for every argument:
+[scikit-learn estimator](https://hqnn-forge.github.io/hqnn-forge/api/sklearn/),
+[preprocessing](https://hqnn-forge.github.io/hqnn-forge/api/preprocessing/),
+[data](https://hqnn-forge.github.io/hqnn-forge/api/data/),
+[evaluation](https://hqnn-forge.github.io/hqnn-forge/api/evaluation/),
+[models](https://hqnn-forge.github.io/hqnn-forge/api/models/),
+[losses and utilities](https://hqnn-forge.github.io/hqnn-forge/api/utils/),
+[training](https://hqnn-forge.github.io/hqnn-forge/api/training/).
 
 ---
 
@@ -371,6 +383,14 @@ total. A seeded hybrid (`init_seed`) gets a control seeded with the same seed.
 Switching a trained model's circuit off with `disable_quantum_layer` measures something
 else, how much that model depends on the circuit.
 
+The API reference documents each architecture's constructor and the pieces behind it:
+[models](https://hqnn-forge.github.io/hqnn-forge/api/models/),
+[encoding layers](https://hqnn-forge.github.io/hqnn-forge/api/encoding/),
+[circuit primitives](https://hqnn-forge.github.io/hqnn-forge/api/circuits/),
+[initialisers](https://hqnn-forge.github.io/hqnn-forge/api/initializers/),
+[diagnostics](https://hqnn-forge.github.io/hqnn-forge/api/diagnostics/),
+[utilities](https://hqnn-forge.github.io/hqnn-forge/api/utils/).
+
 ---
 
 ## Folder Structure
@@ -473,7 +493,8 @@ pytest                 # the full suite, as CI runs it
 
 ## Methodology
 
-[`docs/methodology.md`](https://github.com/g8rdier/hqnn-forge/blob/main/docs/methodology.md)
+The [methodology page](https://hqnn-forge.github.io/hqnn-forge/methodology/)
+([source](https://github.com/hqnn-forge/hqnn-forge/blob/main/docs/methodology.md))
 states the rules the comparisons follow: how the classical control is matched, how folds,
 oversampling and thresholds are handled, which statistical test applies when, the equal tuning
 budget, what the noise sweep models, and what an experiment record captures.
@@ -483,7 +504,7 @@ budget, what the noise sweep models, and what an experiment record captures.
 ## Documentation
 
 The API reference, generated from the docstrings, is at
-**<https://g8rdier.github.io/hqnn-forge/>**. To build it locally:
+**<https://hqnn-forge.github.io/hqnn-forge/>**. To build it locally:
 
 ```bash
 uv run --frozen --group docs mkdocs serve   # or: mkdocs build --strict, as CI does
