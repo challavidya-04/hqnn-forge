@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "hqnn_forge"
 module-root = ""
-source-include = ["tests/**"]
+
 [project]
 name = "hqnn-forge"
 version = "0.1.0"

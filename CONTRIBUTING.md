@@ -209,10 +209,6 @@ it.
 *   **Dependabot bumps the lockfile on its own.** Its PRs update `uv.lock` without touching
     `pyproject.toml`, so contributors only regenerate the lockfile when they change
     `pyproject.toml` by hand.
-    **The build backend requirement is maintained manually.** Dependabot updates `uv.lock`,
-    but it does not update the `uv_build` requirement in `[build-system]`. When a newer
-    compatible `uv_build` release is needed, update `requires` in `pyproject.toml` and run
-    `uv lock`.
 
 *   **Upcoming PennyLane releases are tested weekly.** `.github/workflows/upstream.yml` runs
     the suite against the newest PennyLane and pennylane-lightning pre-releases on PyPI and
@@ -248,6 +244,8 @@ Releases follow [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`)
     above it, and adds the compare link at the bottom. It also bumps `version` in
     `CITATION.cff` to the new version (`tests/test_citation.py` fails until it does) and can
     add a `date-released`.
+*   **When uv moves to a new minor release, raise the `<0.13` cap by hand in `[build-system]` in
+    `pyproject.toml`.**
 *   **Tagging publishes.** After the release PR is merged, tag its merge commit and push the
     tag:
 

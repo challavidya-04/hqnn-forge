@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Packaging (`pyproject.toml`, setuptools), a PEP 561 `py.typed` marker and the Apache-2.0
+- Packaging (`pyproject.toml`, uv_build), a PEP 561 `py.typed` marker and the Apache-2.0
   `LICENSE` file (#2, #86, #87)
 - `PCANormalizer`: pure-NumPy PCA plus standardisation, with optional scaling of the
   components to (−π, π) for angle encoding (#4). It warns when degenerate eigenvalues make
@@ -259,9 +259,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Pages is enabled; a `docs` dependency group installs the tools (#342)
 ### Changed
 - Switched the package build backend from setuptools to uv_build and updated the
-  package metadata for PEP 639-compatible license handling (#449)
+  package metadata for PEP 639-compatible license handling (#458)
 
-### Changed
 - The package metadata links the repository, issue tracker and changelog, and the README's
   image and file links are absolute, so both work on PyPI (#327)
 - The quantum layers run a whole batch in one QNode call instead of looping over samples
@@ -379,7 +378,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   LAPACK build (#81)
 - The initialiser tests had too little power to reject a flat σ, and one failed at random
   (#22, #105)
-- `setuptools>=61` is required, the first version that reads `pyproject.toml` metadata (#135)
+- The package build backend is `uv_build`; `setuptools>=61` is no longer required for building
+  the package (#458)
 - Device fallback raised `AttributeError` on PennyLane 0.45, where `qml.DeviceError` no longer
   exists; the chain now catches `pennylane.exceptions.DeviceError` and is exercised by a test
   (#155)
