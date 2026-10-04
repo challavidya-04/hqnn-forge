@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Packaging (`pyproject.toml`, setuptools), a PEP 561 `py.typed` marker and the Apache-2.0
+- Packaging (`pyproject.toml`, `uv_build`), a PEP 561 `py.typed` marker and the Apache-2.0
   `LICENSE` file (#2, #86, #87)
 - `PCANormalizer`: pure-NumPy PCA plus standardisation, with optional scaling of the
   components to (−π, π) for angle encoding (#4). It warns when degenerate eigenvalues make
@@ -364,6 +364,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The README shows how a benchmark runs as a Mermaid diagram (matched control, shared per-fold
   rules, the reading of the Wilcoxon result), and its architecture diagrams are Mermaid
   instead of ASCII (#451)
+- Switched the package build backend from setuptools to `uv_build` and updated the
+  package metadata for PEP 639-compatible license handling (#458)
 
 ### Fixed
 - Encoding layers raise a construction-time `ValueError` when a resolved device has finite
@@ -378,7 +380,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   LAPACK build (#81)
 - The initialiser tests had too little power to reject a flat σ, and one failed at random
   (#22, #105)
-- `setuptools>=61` is required, the first version that reads `pyproject.toml` metadata (#135)
 - Device fallback raised `AttributeError` on PennyLane 0.45, where `qml.DeviceError` no longer
   exists; the chain now catches `pennylane.exceptions.DeviceError` and is exercised by a test
   (#155)
