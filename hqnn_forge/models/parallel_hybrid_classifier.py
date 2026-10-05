@@ -253,8 +253,8 @@ class ParallelHybridClassifier(QuantumTrunk, BinaryClassifierBase):
         only method that works: ``adjoint`` and ``backprop`` need the exact
         state, and ``finite-diff``'s tiny step turns the shot noise into
         gradients of order 1e6.  The samples come from the device's own
-        generator, which ``torch.manual_seed`` does not reach, so a model with
-        shots does not repeat run to run (#354).
+        generator, which ``torch.manual_seed`` does not reach: pass ``seed``
+        for a model with shots that repeats run to run.
         :func:`hqnn_forge.noise.apply_shots` evaluates a model with a finite
         shot count without rebuilding it.
     noise_channel:
@@ -262,6 +262,11 @@ class ParallelHybridClassifier(QuantumTrunk, BinaryClassifierBase):
         (default), ``"amplitude_damping"``, ``"phase_damping"``,
         ``"bit_flip"`` or ``"phase_flip"``; see :mod:`hqnn_forge.noise`.  The
         trajectory method samples the Pauli ones only.
+    seed:
+        Seed of the device's random generator, which draws the shot samples,
+        so a shot-based model gives the same samples on every run.  Default
+        ``None``: unseeded, and ``torch.manual_seed`` does not reach it.  See
+        :func:`hqnn_forge.encoding._common.resolve_device`.
 
     Attributes
     ----------
@@ -310,9 +315,11 @@ class ParallelHybridClassifier(QuantumTrunk, BinaryClassifierBase):
         trainable_input_scaling: bool = False,
         shots: int | None = None,
         noise_channel: Channel = "depolarizing",
+        seed: int | None = None,
     ) -> None:
         super().__init__()
         init_seed = as_seed(init_seed)
+        seed = as_seed(seed, "seed")
         # Building the layers draws from the global RNG (nn.Linear and
         # TorchLayer defaults), all of it overwritten by _initialise_weights.
         # With init_seed the whole build runs inside seeded_rng, so the
@@ -344,6 +351,7 @@ class ParallelHybridClassifier(QuantumTrunk, BinaryClassifierBase):
                 trainable_input_scaling=trainable_input_scaling,
                 shots=shots,
                 noise_channel=noise_channel,
+                seed=seed,
             )
 
             # Validated before the classical branch is built, as before the shared
@@ -384,6 +392,7 @@ class ParallelHybridClassifier(QuantumTrunk, BinaryClassifierBase):
                 trainable_input_scaling=trainable_input_scaling,
                 shots=shots,
                 noise_channel=noise_channel,
+                seed=seed,
             )
 
             # ── Classical head ────────────────────────────────────────────────

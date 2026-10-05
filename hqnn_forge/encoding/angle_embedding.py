@@ -76,6 +76,7 @@ from hqnn_forge.encoding._common import (
     shots_repr,
     validate_circuit_options,
     validate_device_shots,
+    validate_seed,
     validate_shots,
     variational_weight_shape,
 )
@@ -293,6 +294,7 @@ def build_encoding_qnode(
     entangler: Entangler = "ring",
     readout: Readout = "all",
     shots: int | None = None,
+    seed: int | None = None,
 ) -> qml.QNode:
     """
     Build and return a PennyLane QNode for the angle-embedding feature map.
@@ -335,6 +337,9 @@ def build_encoding_qnode(
         ``"hardware_efficient"``; see :func:`apply_variational_layers`.
     readout:
         ``"all"`` (default): ⟨Z_i⟩ on every qubit.  ``"first"``: ⟨Z_0⟩ only.
+    shots, seed:
+        Finite-shot sampling and the device seed, as for
+        :class:`QuantumEncodingLayer`.
 
     Returns
     -------
@@ -375,7 +380,7 @@ def build_encoding_qnode(
 
     device_name, diff_method = resolve_backend(device_name, diff_method, n_qubits, shots=shots)
     validate_shots(shots, diff_method)
-    device = resolve_device(device_name, n_qubits)
+    device = resolve_device(device_name, n_qubits, seed=seed)
     validate_device_shots(device, shots)
     circuit_fn = _make_angle_embedding_circuit(n_qubits, n_layers, rotation, entangler, readout)
 
@@ -503,9 +508,15 @@ class QuantumEncodingLayer(TrainingNoiseMixin, nn.Module):
         readout is estimated from that many samples, as on hardware.  Needs
         ``diff_method="parameter-shift"``; with training noise, only
         ``noise_method="trajectories"``.  The samples come from the device's
-        own generator, which ``torch.manual_seed`` does not reach (#354).
-        The ``shots`` attribute reads the QNode the layer runs, so it follows
+        own generator, which ``torch.manual_seed`` does not reach: pass
+        ``seed`` for samples that repeat run to run.  The ``shots`` attribute
+        reads the QNode the layer runs, so it follows
         :func:`hqnn_forge.noise.apply_shots`.
+    seed:
+        Seed of the device's generator, which draws the shot samples; a
+        non-negative ``int`` (NumPy integers are converted) or ``None``
+        (default: unseeded).  Inert for exact simulation.  Shown in the repr;
+        see :func:`~hqnn_forge.encoding.angle_embedding.resolve_device`.
 
     Attributes
     ----------
@@ -555,6 +566,7 @@ class QuantumEncodingLayer(TrainingNoiseMixin, nn.Module):
         noise_trajectories: int = 1,
         shots: int | None = None,
         noise_channel: Channel = "depolarizing",
+        seed: int | None = None,
     ) -> None:
         super().__init__()
 
@@ -575,6 +587,7 @@ class QuantumEncodingLayer(TrainingNoiseMixin, nn.Module):
             entangler=entangler,
             readout=readout,
             shots=shots,
+            seed=seed,
         )
 
         # Declare the trainable weight tensor shape for TorchLayer ─────────
@@ -601,6 +614,7 @@ class QuantumEncodingLayer(TrainingNoiseMixin, nn.Module):
             shots=shots,
             noise_channel=noise_channel,
         )
+        self.seed = validate_seed(seed)
 
     # ------------------------------------------------------------------
     # Forward pass
@@ -664,7 +678,9 @@ class QuantumEncodingLayer(TrainingNoiseMixin, nn.Module):
             options += f", entangler={self.entangler!r}"
         if self.readout != "all":
             options += f", readout={self.readout!r}"
-        options += self._noise_repr() + shots_repr(self.shots) + backend_repr(self.qlayer)
+        options += (
+            self._noise_repr() + shots_repr(self.shots, self.seed) + backend_repr(self.qlayer)
+        )
         return (
             f"n_qubits={self.n_qubits}, "
             f"n_layers={self.n_layers}, "

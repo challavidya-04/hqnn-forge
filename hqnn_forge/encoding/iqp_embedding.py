@@ -50,6 +50,7 @@ from hqnn_forge.encoding._common import (
     shots_repr,
     validate_circuit_options,
     validate_device_shots,
+    validate_seed,
     validate_shots,
     variational_weight_shape,
 )
@@ -144,6 +145,7 @@ def build_iqp_qnode(
     entangler: Entangler = "ring",
     readout: Readout = "all",
     shots: int | None = None,
+    seed: int | None = None,
 ) -> qml.QNode:
     """Build and return a PennyLane QNode for the IQP feature map."""
     if n_qubits < 2:
@@ -151,7 +153,7 @@ def build_iqp_qnode(
 
     device_name, diff_method = resolve_backend(device_name, diff_method, n_qubits, shots=shots)
     validate_shots(shots, diff_method)
-    device = resolve_device(device_name, n_qubits)
+    device = resolve_device(device_name, n_qubits, seed=seed)
     validate_device_shots(device, shots)
     circuit_fn = _make_iqp_embedding_circuit(n_qubits, n_layers, n_repeats, entangler, readout)
 
@@ -178,7 +180,7 @@ class IQPEncodingLayer(TrainingNoiseMixin, nn.Module):
     ``noise_trajectories`` / ``noise_channel`` add training-time noise
     (depolarizing by default; ``noise_level``'s range depends on the
     channel), and
-    ``shots`` finite-shot sampling, exactly as in
+    ``shots`` and ``seed`` finite-shot sampling and its device seed, exactly as in
     :class:`~hqnn_forge.encoding.QuantumEncodingLayer`.
     """
 
@@ -197,6 +199,7 @@ class IQPEncodingLayer(TrainingNoiseMixin, nn.Module):
         noise_trajectories: int = 1,
         shots: int | None = None,
         noise_channel: Channel = "depolarizing",
+        seed: int | None = None,
     ) -> None:
         super().__init__()
 
@@ -217,6 +220,7 @@ class IQPEncodingLayer(TrainingNoiseMixin, nn.Module):
             entangler=entangler,
             readout=readout,
             shots=shots,
+            seed=seed,
         )
 
         weight_shapes: dict[str, tuple[int, ...]] = {
@@ -235,6 +239,7 @@ class IQPEncodingLayer(TrainingNoiseMixin, nn.Module):
             shots=shots,
             noise_channel=noise_channel,
         )
+        self.seed = validate_seed(seed)
 
     def prepare_inputs(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -266,5 +271,5 @@ class IQPEncodingLayer(TrainingNoiseMixin, nn.Module):
             f"n_layers={self.n_layers}, "
             f"n_repeats={self.n_repeats}, "
             f"n_params={sum(p.numel() for p in self.parameters())}{options}"
-            f"{shots_repr(self.shots)}{backend_repr(self.qlayer)}"
+            f"{shots_repr(self.shots, self.seed)}{backend_repr(self.qlayer)}"
         )
