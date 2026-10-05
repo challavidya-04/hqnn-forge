@@ -70,13 +70,17 @@ use_classical_encoder:
     lie in (-π, π) (e.g. ``PCANormalizer(scale_to_pi=True)``); the quantum
     branch then passes it to the circuit unscaled.
 device_name:
-    PennyLane device string, one of ``"lightning.gpu"``, ``"lightning.kokkos"``,
-    ``"lightning.qubit"`` or ``"default.qubit"``; any other name raises ``ValueError``.
-    A backend that cannot be initialised falls back along
-    ``lightning.qubit → default.qubit`` with a warning.
+    PennyLane device name.  Default ``"auto"``: ``default.qubit`` up to
+    12 qubits, ``lightning.qubit`` above (see
+    :func:`~hqnn_forge.encoding.resolve_backend`).  The four simulators
+    fall back along ``lightning.qubit → default.qubit`` with a warning
+    when a backend cannot be initialised; any other name (a plugin or
+    hardware) is used as given.
 diff_method:
-    Gradient computation method: ``"adjoint"``, ``"parameter-shift"``, ``"backprop"``
-    or ``"finite-diff"``.
+    ``"auto"`` (default) picks by device: ``"backprop"`` on
+    ``default.qubit``, ``"adjoint"`` on lightning, ``"parameter-shift"``
+    with ``shots`` or on any other device.  Or one of ``"adjoint"``,
+    ``"parameter-shift"``, ``"backprop"``, ``"finite-diff"``.
 init_strategy:
     ``"restricted"`` (default) — global restricted-normal init.
     ``"block_local"``           — per-layer decreasing variance.
@@ -146,13 +150,17 @@ class ParallelHybridClassifier(QuantumTrunk, BinaryClassifierBase):
     dropout_p:
         Dropout probability applied to the fused branch outputs.  Default: 0.0.
     device_name:
-        PennyLane device string, one of ``"lightning.gpu"``, ``"lightning.kokkos"``,
-        ``"lightning.qubit"`` or ``"default.qubit"``; any other name raises
-        ``ValueError``.  Default: ``"lightning.qubit"``.  A backend that cannot be
-        initialised falls back along ``lightning.qubit → default.qubit`` with a warning.
+        PennyLane device name.  Default ``"auto"``: ``default.qubit`` up to
+        12 qubits, ``lightning.qubit`` above (see
+        :func:`~hqnn_forge.encoding.resolve_backend`).  The four simulators
+        fall back along ``lightning.qubit → default.qubit`` with a warning
+        when a backend cannot be initialised; any other name (a plugin or
+        hardware) is used as given.
     diff_method:
-        Gradient method: ``"adjoint"``, ``"parameter-shift"``, ``"backprop"`` or
-        ``"finite-diff"``.  Default: ``"adjoint"``.
+        ``"auto"`` (default) picks by device: ``"backprop"`` on
+        ``default.qubit``, ``"adjoint"`` on lightning, ``"parameter-shift"``
+        with ``shots`` or on any other device.  Or one of ``"adjoint"``,
+        ``"parameter-shift"``, ``"backprop"``, ``"finite-diff"``.
     init_strategy:
         ``"restricted"`` (default), ``"block_local"``, or ``"normal"``
         (``N(0, init_std²)``, the published SHNN's init).
@@ -171,9 +179,9 @@ class ParallelHybridClassifier(QuantumTrunk, BinaryClassifierBase):
           classical encoder then maps to ``2**n_qubits`` features, and the
           ``·π`` scaling is irrelevant because the layer normalises.  Its
           input gradient is only correct under backprop, so with a classical
-          encoder it requires ``diff_method="backprop"`` (on
-          ``default.qubit``) and raises otherwise.  Without one, 1 to
-          ``2**n_qubits`` raw features are zero-padded.
+          encoder ``"auto"`` picks ``default.qubit``/backprop at any size, and
+          an explicit choice that resolves to another method raises.  Without
+          one, 1 to ``2**n_qubits`` raw features are zero-padded.
     embedding_rotation:
         Pauli axis of the angle embedding, ``"X"`` (default), ``"Y"`` or ``"Z"``.
         Angle and re-uploading encodings only.  ``"Z"`` raises under angle
@@ -241,11 +249,12 @@ class ParallelHybridClassifier(QuantumTrunk, BinaryClassifierBase):
     shots:
         ``None`` (default): exact expectation values.  An ``int``: each circuit
         is sampled that many times, as on hardware, so predictions carry shot
-        noise.  Requires ``diff_method="parameter-shift"``: ``adjoint`` and
-        ``backprop`` need the exact state, and ``finite-diff``'s tiny step
-        turns the shot noise into gradients of order 1e6.  The samples come
-        from the device's own generator, which ``torch.manual_seed`` does not
-        reach, so a model with shots does not repeat run to run (#354).
+        noise.  ``diff_method="auto"`` then picks ``"parameter-shift"``, the
+        only method that works: ``adjoint`` and ``backprop`` need the exact
+        state, and ``finite-diff``'s tiny step turns the shot noise into
+        gradients of order 1e6.  The samples come from the device's own
+        generator, which ``torch.manual_seed`` does not reach, so a model with
+        shots does not repeat run to run (#354).
         :func:`hqnn_forge.noise.apply_shots` evaluates a model with a finite
         shot count without rebuilding it.
     noise_channel:
@@ -283,8 +292,8 @@ class ParallelHybridClassifier(QuantumTrunk, BinaryClassifierBase):
         classical_hidden_dim: int = 16,
         use_classical_encoder: bool = True,
         dropout_p: float = 0.0,
-        device_name: DeviceName = "lightning.qubit",
-        diff_method: DiffMethod = "adjoint",
+        device_name: DeviceName = "auto",
+        diff_method: DiffMethod = "auto",
         init_strategy: str = "restricted",
         encoding_type: str = "angle",
         embedding_rotation: RotationAxis = "X",
