@@ -263,6 +263,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from the same device generator state, which cut the shot-noise variance of its gradient
   estimate about fourfold; `train_model` passes the model it trains when `model=` is not
   given (#354, #369)
+- `examples/hardware_workflow.py` and a README section: shots, parameter-shift checked against
+  backprop, SPSA, per-step circuit counts with `qml.Tracker`, and shot and noise sweeps, with
+  how to point it at a real device (#356)
 
 ### Changed
 - The package metadata links the repository, issue tracker and changelog, and the README's
