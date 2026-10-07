@@ -88,7 +88,9 @@ is #414.
 - **Beyond that, use `"trajectories"` with `noise_trajectories ≥ 4`**, give it a longer
   training budget than density needs (more epochs, and a patience well above 10), and check
   the runs, especially at noise strengths of a few percent per gate. With 5 seeds, a run that
-  has not left the plateau is visible as an outlier in the seed spread.
+  has not left the plateau is visible as an outlier in the seed spread. The follow-up in
+  `trajectory-collapse-study.md` (#347) raises this to **≥ 8**: at k = 8 every run trained
+  within the same budget as density.
 - **Do not switch the default automatically by qubit count** on this evidence. A slower start
   and an occasional stall are behaviour changes that a default should not introduce silently.
 
@@ -114,5 +116,6 @@ is #414.
   training fold is about 364k rows after SMOTE balancing (about 1,420 steps), so one epoch of
   one fold would take about 3.6 h. Second, `run_benchmark` does not return its
   trained models, so `noise_sweep` cannot score them. The re-run is #414.
-- The learning rate and schedule were not tuned per method. Whether a lower learning rate
-  shortens the plateau is #347.
+- The learning rate and schedule were not tuned per method. #347 tried lower learning rates
+  within the same budget (`trajectory-collapse-study.md`): they did not help there, which a
+  longer plateau would also explain. Whether they shorten or lengthen it is #480.
