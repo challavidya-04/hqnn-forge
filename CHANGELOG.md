@@ -277,6 +277,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on the same proxy over 10 seeds. Only `noise_trajectories = 8` trained in every run, so the
   `noise_method` and `noise_trajectories` documentation now recommends 8 or more, or a longer
   training budget with fewer draws (#347, #367)
+- `noise_method="trajectories"` for amplitude and phase damping: phase damping is sampled as the
+  phase flip it equals, amplitude damping by weighted Kraus branches whose mean is the density
+  channel exactly; the latter needs backprop, parameter-shift or finite-diff, `default.qubit` or
+  `lightning.qubit`, and exact expectation values (#357)
 
 ### Changed
 - The package metadata links the repository, issue tracker and changelog, and the README's

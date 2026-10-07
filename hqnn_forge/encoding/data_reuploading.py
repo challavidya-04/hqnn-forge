@@ -378,7 +378,7 @@ class DataReuploadingLayer(TrainingNoiseMixin, nn.Module):
         ``[0, 0.75]`` for depolarizing and ``[0, 1]`` for the damping and flip
         channels (default 0, noiseless), applied in train mode only, at
         ``"all"`` gates or at the ``"end"``, simulated exactly (``"density"``)
-        or by Pauli trajectories (the Pauli channels only).  See
+        or by trajectories (amplitude damping with restrictions).  See
         :mod:`hqnn_forge.noise`.
     shots, seed:
         Finite-shot sampling and the device seed, exactly as for

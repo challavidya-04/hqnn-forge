@@ -504,8 +504,10 @@ class QuantumEncodingLayer(TrainingNoiseMixin, nn.Module):
         The channel ``noise_level`` is the strength of: ``"depolarizing"``
         (default), ``"amplitude_damping"`` (T1), ``"phase_damping"`` (T2),
         ``"bit_flip"`` (also a symmetric readout error at ``"end"``) or
-        ``"phase_flip"``; see :mod:`hqnn_forge.noise`.  The trajectory method
-        samples the Pauli ones only (depolarizing, bit flip, phase flip).
+        ``"phase_flip"``; see :mod:`hqnn_forge.noise`.  With
+        ``noise_method="trajectories"``, amplitude damping needs
+        ``diff_method="backprop"``, ``"parameter-shift"`` or ``"finite-diff"``,
+        ``default.qubit`` or ``lightning.qubit``, and no ``shots``.
     shots:
         ``None`` (default): exact expectation values.  An ``int``: every
         readout is estimated from that many samples, as on hardware.  Needs
