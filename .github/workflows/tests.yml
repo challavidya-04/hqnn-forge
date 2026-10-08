@@ -13,6 +13,7 @@ on:
   # workflow only when the base changed. An `edited` trigger here would post
   # skipped check runs under these job names for every title or body edit,
   # and the checks page would show those instead of the real results (#346).
+  # dispatch.yml calls it too, to run the suite by hand on main (#398).
   workflow_call:
 
 permissions:
@@ -25,9 +26,12 @@ permissions:
 # Pushes to main group per commit: a group holds one running and one pending
 # run, and a third arrival cancels the pending one even without
 # cancel-in-progress, so merges in quick succession would leave main commits
-# without a completed run.
+# without a completed run. A run dispatched by hand (called from dispatch.yml,
+# with the caller's `workflow_dispatch` event context) gets its own group per
+# commit too: in the push run's group, a second dispatch arriving while a late
+# push run is pending would cancel that push run.
 concurrency:
-  group: tests-${{ github.event.pull_request.number || github.sha }}${{ github.event.action == 'edited' && '-retarget' || '' }}
+  group: tests-${{ github.event.pull_request.number || github.sha }}${{ github.event.action == 'edited' && '-retarget' || '' }}${{ github.event_name == 'workflow_dispatch' && '-dispatch' || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
