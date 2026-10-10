@@ -91,6 +91,10 @@ class TestPyPIReadme:
             # install it
             ```
 
+            ```python
+            # python comment
+            ```
+
             ```mermaid
             graph TD; A-->B
             ```
@@ -99,9 +103,52 @@ class TestPyPIReadme:
         output = pypi_readme.generate(sample, repo_url="https://github.com/org/repo")
         assert "*[View diagram on GitHub](https://github.com/org/repo#title)*" in output
         assert "install-it" not in output
+        assert "python-comment" not in output
 
     def test_unknown_argument_exits_with_error(self) -> None:
         assert pypi_readme.main(["pypi_readme.py", "--chekc"]) == 2
+
+    def test_mutually_exclusive_check_and_in_place(self) -> None:
+        assert pypi_readme.main(["--check", "--in-place"]) == 2
+
+    def test_normal_generation(self, tmp_path: Path) -> None:
+        readme = tmp_path / "README.md"
+        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
+        pypi_readme_file = tmp_path / "README.pypi.md"
+        assert pypi_readme.main([], root=tmp_path) == 0
+        assert pypi_readme_file.exists()
+        content = pypi_readme_file.read_text(encoding="utf-8")
+        assert "```mermaid" not in content
+        assert "*[View diagram on GitHub]" in content
+
+    def test_check_flag_passes_when_up_to_date(self, tmp_path: Path) -> None:
+        readme = tmp_path / "README.md"
+        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
+        assert pypi_readme.main([], root=tmp_path) == 0
+        assert pypi_readme.main(["--check"], root=tmp_path) == 0
+
+    def test_check_flag_fails_when_missing(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        readme = tmp_path / "README.md"
+        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
+        assert pypi_readme.main(["--check"], root=tmp_path) == 1
+        captured = capsys.readouterr()
+        assert "does not exist" in captured.err
+
+    def test_check_flag_fails_when_stale_without_overwriting(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        readme = tmp_path / "README.md"
+        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
+        pypi_readme_file = tmp_path / "README.pypi.md"
+        pypi_readme_file.write_text("old stale content", encoding="utf-8")
+
+        assert pypi_readme.main(["--check"], root=tmp_path) == 1
+        # Confirm it did NOT overwrite the file
+        assert pypi_readme_file.read_text(encoding="utf-8") == "old stale content"
+        captured = capsys.readouterr()
+        assert "is out of date" in captured.err
 
     def test_in_place_flag(self, tmp_path: Path) -> None:
         readme = tmp_path / "README.md"
@@ -114,13 +161,6 @@ class TestPyPIReadme:
         content = readme.read_text(encoding="utf-8")
         assert "```mermaid" not in content
         assert "*[View diagram on GitHub](https://github.com/org/repo#title)*" in content
-
-    def test_main_stdout(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        readme = tmp_path / "README.md"
-        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
-        assert pypi_readme.main([], root=tmp_path) == 0
-        captured = capsys.readouterr()
-        assert "*[View diagram on GitHub]" in captured.out
 
     def test_generate_on_real_readme(self) -> None:
         readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
