@@ -1,4 +1,4 @@
-"""Generate README.pypi.md from README.md with Mermaid diagrams replaced by links.
+"""Generate a PyPI-compatible README by replacing Mermaid diagrams with links.
 
 PyPI does not render Mermaid fenced code blocks and displays them as raw source.
 This script generates a PyPI-compatible README that replaces each Mermaid diagram
@@ -7,7 +7,6 @@ repository README.
 
 Usage:
     python .github/scripts/pypi_readme.py
-    python .github/scripts/pypi_readme.py --check
     python .github/scripts/pypi_readme.py --in-place
 """
 
@@ -49,30 +48,42 @@ def generate(readme_text: str, repo_url: str = DEFAULT_REPO_URL) -> str:
     current_slug: str | None = None
     in_mermaid = False
     in_code_block = False
+    fence_char: str | None = None
+    fence_len: int = 0
+    mermaid_fence_len: int = 0
 
     for line in lines:
         stripped = line.strip()
 
         if in_mermaid:
-            if stripped.startswith(("```", "~~~")):
+            if re.match(rf"^`{{{mermaid_fence_len},}}\s*$", stripped):
                 in_mermaid = False
             continue
 
         if in_code_block:
-            if stripped.startswith(("```", "~~~")):
+            assert fence_char is not None
+            if re.match(rf"^{re.escape(fence_char)}{{{fence_len},}}\s*$", stripped):
                 in_code_block = False
+                fence_char = None
+                fence_len = 0
             out.append(line)
             continue
 
-        if stripped.startswith("```mermaid"):
+        mermaid_match = re.match(r"^(`{3,})mermaid\b", stripped)
+        if mermaid_match:
             in_mermaid = True
+            mermaid_fence_len = len(mermaid_match.group(1))
             target_url = f"{repo_url}#{current_slug}" if current_slug else repo_url
             nl = "\r\n" if line.endswith("\r\n") else "\n"
             out.append(f"*[View diagram on GitHub]({target_url})*{nl}")
             continue
 
-        if stripped.startswith(("```", "~~~")):
+        fence_match = re.match(r"^(`{3,}|~{3,})", stripped)
+        if fence_match:
             in_code_block = True
+            fence_str = fence_match.group(1)
+            fence_char = fence_str[0]
+            fence_len = len(fence_str)
             out.append(line)
             continue
 
@@ -86,17 +97,11 @@ def generate(readme_text: str, repo_url: str = DEFAULT_REPO_URL) -> str:
 
 
 def main(argv: list[str] | None = None, root: Path | None = None) -> int:
-    """Generate PyPI-compatible README, check it, or rewrite README.md in place."""
+    """Generate a PyPI-compatible README or rewrite README.md in place."""
     parser = argparse.ArgumentParser(
-        description="Generate PyPI-compatible README by replacing Mermaid diagrams with links."
+        description="Generate a PyPI-compatible README by replacing Mermaid diagrams with links."
     )
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        "--check",
-        action="store_true",
-        help="Check that README.pypi.md exists and is up to date with README.md.",
-    )
-    group.add_argument(
+    parser.add_argument(
         "--in-place",
         action="store_true",
         help="Rewrite README.md in place in the repository root.",
@@ -117,7 +122,6 @@ def main(argv: list[str] | None = None, root: Path | None = None) -> int:
     if root is None:
         root = Path(__file__).resolve().parents[2]
     readme_path = root / "README.md"
-    pypi_readme_path = root / "README.pypi.md"
 
     if not readme_path.exists():
         print(f"Error: {readme_path} not found", file=sys.stderr)
@@ -127,29 +131,11 @@ def main(argv: list[str] | None = None, root: Path | None = None) -> int:
     original_text = readme_path.read_text(encoding="utf-8")
     generated_text = generate(original_text, repo_url=repo_url)
 
-    if args.check:
-        if not pypi_readme_path.exists():
-            print(
-                f"{pypi_readme_path.name} does not exist. "
-                "Regenerate it with: python .github/scripts/pypi_readme.py",
-                file=sys.stderr,
-            )
-            return 1
-        committed_text = pypi_readme_path.read_text(encoding="utf-8")
-        if committed_text != generated_text:
-            print(
-                f"{pypi_readme_path.name} is out of date with {readme_path.name}. "
-                "Regenerate it with: python .github/scripts/pypi_readme.py",
-                file=sys.stderr,
-            )
-            return 1
-        return 0
-
     if args.in_place:
         readme_path.write_text(generated_text, encoding="utf-8", newline="\n")
         return 0
 
-    pypi_readme_path.write_text(generated_text, encoding="utf-8", newline="\n")
+    sys.stdout.write(generated_text)
     return 0
 
 

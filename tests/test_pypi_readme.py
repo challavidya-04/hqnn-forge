@@ -105,50 +105,77 @@ class TestPyPIReadme:
         assert "install-it" not in output
         assert "python-comment" not in output
 
-    def test_unknown_argument_exits_with_error(self) -> None:
-        assert pypi_readme.main(["pypi_readme.py", "--chekc"]) == 2
+    def test_mermaid_inside_outer_code_fence_is_not_replaced(self) -> None:
+        sample = textwrap.dedent(
+            """\
+            # Document Title
 
-    def test_mutually_exclusive_check_and_in_place(self) -> None:
-        assert pypi_readme.main(["--check", "--in-place"]) == 2
+            ````markdown
+            Here is how you write a Mermaid block:
+            ```mermaid
+            graph TD; A-->B
+            ```
+            ````
 
-    def test_normal_generation(self, tmp_path: Path) -> None:
-        readme = tmp_path / "README.md"
-        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
-        pypi_readme_file = tmp_path / "README.pypi.md"
-        assert pypi_readme.main([], root=tmp_path) == 0
-        assert pypi_readme_file.exists()
-        content = pypi_readme_file.read_text(encoding="utf-8")
-        assert "```mermaid" not in content
-        assert "*[View diagram on GitHub]" in content
+            ```mermaid
+            graph LR; X-->Y
+            ```
+            """
+        )
+        output = pypi_readme.generate(sample, repo_url="https://github.com/org/repo")
+        # The inner markdown example must retain its mermaid code verbatim
+        assert "```mermaid\ngraph TD; A-->B\n```" in output
+        # The real mermaid diagram after the block must be replaced with link to Document Title
+        assert "*[View diagram on GitHub](https://github.com/org/repo#document-title)*" in output
 
-    def test_check_flag_passes_when_up_to_date(self, tmp_path: Path) -> None:
-        readme = tmp_path / "README.md"
-        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
-        assert pypi_readme.main([], root=tmp_path) == 0
-        assert pypi_readme.main(["--check"], root=tmp_path) == 0
+    def test_tilde_fence_handles_headings_and_backticks(self) -> None:
+        sample = textwrap.dedent(
+            """\
+            # Tilde Heading
 
-    def test_check_flag_fails_when_missing(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        readme = tmp_path / "README.md"
-        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
-        assert pypi_readme.main(["--check"], root=tmp_path) == 1
-        captured = capsys.readouterr()
-        assert "does not exist" in captured.err
+            ~~~python
+            # code comment
+            echo "```"
+            ~~~
 
-    def test_check_flag_fails_when_stale_without_overwriting(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        readme = tmp_path / "README.md"
-        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
-        pypi_readme_file = tmp_path / "README.pypi.md"
-        pypi_readme_file.write_text("old stale content", encoding="utf-8")
+            ```mermaid
+            graph TD; A-->B
+            ```
+            """
+        )
+        output = pypi_readme.generate(sample, repo_url="https://github.com/org/repo")
+        assert "*[View diagram on GitHub](https://github.com/org/repo#tilde-heading)*" in output
+        assert "code-comment" not in output
 
-        assert pypi_readme.main(["--check"], root=tmp_path) == 1
-        # Confirm it did NOT overwrite the file
-        assert pypi_readme_file.read_text(encoding="utf-8") == "old stale content"
-        captured = capsys.readouterr()
-        assert "is out of date" in captured.err
+    def test_closing_fence_does_not_cause_incorrect_state(self) -> None:
+        sample = textwrap.dedent(
+            """\
+            # Section One
+
+            ```bash
+            run command
+            ```
+
+            ```mermaid
+            graph TD; A-->B
+            ```
+
+            # Section Two
+
+            ```python
+            test()
+            ```
+
+            ```mermaid
+            graph LR; C-->D
+            ```
+            """
+        )
+        output = pypi_readme.generate(sample, repo_url="https://github.com/org/repo")
+        assert "*[View diagram on GitHub](https://github.com/org/repo#section-one)*" in output
+        assert "*[View diagram on GitHub](https://github.com/org/repo#section-two)*" in output
+        assert "run command" in output
+        assert "test()" in output
 
     def test_in_place_flag(self, tmp_path: Path) -> None:
         readme = tmp_path / "README.md"
@@ -161,6 +188,38 @@ class TestPyPIReadme:
         content = readme.read_text(encoding="utf-8")
         assert "```mermaid" not in content
         assert "*[View diagram on GitHub](https://github.com/org/repo#title)*" in content
+
+    def test_normal_invocation_writes_stdout(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        readme = tmp_path / "README.md"
+        readme.write_text("# Title\n\n```mermaid\ngraph TD\n```\n", encoding="utf-8")
+        assert pypi_readme.main([], root=tmp_path) == 0
+        captured = capsys.readouterr()
+        assert "*[View diagram on GitHub]" in captured.out
+        # Confirm no extra files like README.pypi.md were generated
+        assert not (tmp_path / "README.pypi.md").exists()
+
+    def test_check_flag_not_supported(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        readme = tmp_path / "README.md"
+        original = "# Title\n\n```mermaid\ngraph TD\n```\n"
+        readme.write_text(original, encoding="utf-8")
+        assert pypi_readme.main(["--check"], root=tmp_path) == 2
+        assert readme.read_text(encoding="utf-8") == original
+        assert not (tmp_path / "README.pypi.md").exists()
+
+    def test_unknown_argument_fails_without_modifying_files(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        readme = tmp_path / "README.md"
+        original = "# Title\n\n```mermaid\ngraph TD\n```\n"
+        readme.write_text(original, encoding="utf-8")
+        assert pypi_readme.main(["--chekc"], root=tmp_path) == 2
+        assert pypi_readme.main(["--unknown-option"], root=tmp_path) == 2
+        assert readme.read_text(encoding="utf-8") == original
+        assert not (tmp_path / "README.pypi.md").exists()
 
     def test_generate_on_real_readme(self) -> None:
         readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
